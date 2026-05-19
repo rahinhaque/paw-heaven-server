@@ -39,6 +39,11 @@ async function run() {
     const result = await animalCollection.insertOne(animal);
     res.send(result);
    })
+   //getting all the animals 
+   app.get('/animals', async(req, res) => {
+    const result = await animalCollection.find().toArray();
+    res.send(result);
+   })
 
 
 
