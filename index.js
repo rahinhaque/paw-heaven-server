@@ -60,6 +60,16 @@ async function run() {
       const result = await animalCollection.findOne(query);
       res.send(result);
     });
+    //edit one animal data
+    app.patch("/animals/:id", async (req, res) => {
+     const {id } = req.params;
+     const updatedAnimal = req.body;
+     const result = await animalCollection.updateOne(
+       { _id: new ObjectId(id) },
+       { $set: updatedAnimal }
+     )
+     res.send(result);
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
