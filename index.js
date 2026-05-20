@@ -28,34 +28,38 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-   //Created database
-   const db = client.db('paw-heaven');
-   const animalCollection = db.collection('animals');
+    //Created database
+    const db = client.db("paw-heaven");
+    const animalCollection = db.collection("animals");
 
-   //Add animals  
-   app.post('/animals', async(req, res) => {
-    const animal = req.body;
-    console.log(animal);
-    const result = await animalCollection.insertOne(animal);
-    res.send(result);
-   })
-   //getting all the animals 
-   app.get('/animals', async(req, res) => {
-    const result = await animalCollection.find().toArray();
-    res.send(result);
-   })
-   //get one animal data
-   app.get('/animals/:id', async(req, res) => {
-    const id = req.params.id;
-    const query = {_id: new ObjectId(id)};
-    const result = await animalCollection.findOne(query);
-    res.send(result);
-   })
+    //Add animals
+    app.post("/animals", async (req, res) => {
+      const animal = req.body;
+      console.log(animal);
+      const result = await animalCollection.insertOne(animal);
+      res.send(result);
+    });
+    //getting all the animals
+    app.get("/animals", async (req, res) => {
+      const result = await animalCollection.find().toArray();
+      res.send(result);
+    });
 
+    // Get all animals added by a specific user
+    app.get("/animals/user/:email", async (req, res) => {
+      const email = decodeURIComponent(req.params.email);
+      const query = { ownerEmail: email }; // ✅ changed from userEmail to ownerEmail
+      const result = await animalCollection.find(query).toArray();
+      res.send(result);
+    });
 
-
-
-
+    //get one animal data
+    app.get("/animals/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await animalCollection.findOne(query);
+      res.send(result);
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
