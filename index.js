@@ -45,7 +45,6 @@ async function run() {
       const result = await animalCollection.find().toArray();
       res.send(result);
     });
-
     // Get all animals added by a specific user
     app.get("/animals/user/:email", async (req, res) => {
       const email = decodeURIComponent(req.params.email);
@@ -120,7 +119,29 @@ async function run() {
         res.status(500).send({ error: true, message: "Internal Server Error" });
       }
     });
+    
+    // GET /adoptions/check?petId=xxx&email=yyy
+    app.get("/adoptions/check", async (req, res) => {
+      try {
+        const { petId, email } = req.query;
 
+        if (!petId || !email) {
+          return res
+            .status(400)
+            .json({ error: true, message: "petId and email are required" });
+        }
+
+        const existing = await adoptionCollection.findOne({
+          petId: petId,
+          userEmail: email, // ✅ matches your actual field name
+        });
+
+        res.json({ hasApplied: !!existing });
+      } catch (error) {
+        console.error("Error checking adoption:", error);
+        res.status(500).json({ error: true, message: "Internal Server Error" });
+      }
+    });
     // 4. PUT (Update) the status of an adoption request (Approve/Reject)
     app.put("/adoptions/:id", async (req, res) => {
       try {
