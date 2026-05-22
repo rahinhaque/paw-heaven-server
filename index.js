@@ -14,14 +14,10 @@ const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 
 app.use(
   cors({
-  
+    origin: ["http://localhost:3000", "https://paw-heaven-beige.vercel.app"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"], // ✅ add this
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-    origin: [
-      "http://localhost:3000", // local dev
-      "https://paw-heaven-beige.vercel.app", // production
-    ],
   }),
 );
 app.use(express.json());
