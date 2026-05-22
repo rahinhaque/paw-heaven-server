@@ -14,10 +14,14 @@ const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+  
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"], // ✅ add this
     credentials: true,
+    origin: [
+      "http://localhost:3000", // local dev
+      "https://paw-heaven-beige.vercel.app", // production
+    ],
   }),
 );
 app.use(express.json());
@@ -42,7 +46,7 @@ async function run() {
 
     //middleware
     const JWKS = createRemoteJWKSet(
-      new URL("http://localhost:3000/api/auth/jwks"),
+      new URL(`${process.env.CLIENT_URI}/api/auth/jwks`),
     );
 
 
@@ -242,7 +246,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
