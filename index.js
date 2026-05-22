@@ -42,9 +42,17 @@ async function run() {
     });
     //getting all the animals
     app.get("/animals", async (req, res) => {
-      const result = await animalCollection.find().toArray();
+      console.log("Query received:", req.query); 
+      const {name , species} = req.query;
+
+      const query = {};
+      if(name) query.petName = { $regex: name, $options: "i" };
+      if(species) query.species = {$regex : species , $options : "i"}
+
+      const result = await animalCollection.find(query).toArray();
       res.send(result);
     });
+
     // Get all animals added by a specific user
     app.get("/animals/user/:email", async (req, res) => {
       const email = decodeURIComponent(req.params.email);
