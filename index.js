@@ -10,12 +10,19 @@ dotenv.config();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"], // ✅ add this
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
-const uri =
-  process.env.MONGODB_URI
+const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -33,8 +40,34 @@ async function run() {
     const animalCollection = db.collection("animals");
     const adoptionCollection = db.collection("adoptions");
 
+    //middleware
+    const JWKS = createRemoteJWKSet(
+      new URL("http://localhost:3000/api/auth/jwks"),
+    );
+
+
+    const verifyToken = async(req , res , next) => {
+      const authHeader = req?.headers.authorization;
+      if(!authHeader) {
+        return res.status(401).send({ error: true, message: "Unauthorized access" });
+      }
+      const token = authHeader.split(" ")[1];
+      if(!token) {
+        return res.status(401).send({ error: true, message: "Unauthorized access" });
+      }
+      // console.log(token);
+     try{
+       const {payload} = await jwtVerify(token, JWKS)
+       next();
+     }catch(error){
+      console.log(error);
+      return res.status(403).send({ error: true, message: "Forbidden" });
+     }
+
+    }
+
     //Add animals
-    app.post("/animals", async (req, res) => {
+    app.post("/animals",verifyToken, async (req, res) => {
       const animal = req.body;
       console.log(animal);
       const result = await animalCollection.insertOne(animal);
@@ -42,16 +75,16 @@ async function run() {
     });
     //getting all the animals
     app.get("/animals", async (req, res) => {
-      console.log("Query received:", req.query); 
-      const {name , species} = req.query;
+      console.log("Query received:", req.query);
+      const { name, species } = req.query;
 
       const query = {};
-      if(name) query.petName = { $regex: name, $options: "i" };
-       if (species) {
-         // species can be "Dog" (single) or "Dog,Cat,Bird" (multiple)
-         const speciesArray = species.split(",").map((s) => s.trim());
-         query.species = { $in: speciesArray };
-       }
+      if (name) query.petName = { $regex: name, $options: "i" };
+      if (species) {
+        // species can be "Dog" (single) or "Dog,Cat,Bird" (multiple)
+        const speciesArray = species.split(",").map((s) => s.trim());
+        query.species = { $in: speciesArray };
+      }
 
       const result = await animalCollection.find(query).toArray();
       res.send(result);
@@ -66,14 +99,18 @@ async function run() {
     });
 
     //get one animal data
-    app.get("/animals/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await animalCollection.findOne(query);
-      res.send(result);
-    });
+    app.get(
+      "/animals/:id",
+      verifyToken,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await animalCollection.findOne(query);
+        res.send(result);
+      },
+    );
     //edit one animal data
-    app.patch("/animals/:id", async (req, res) => {
+    app.patch("/animals/:id",verifyToken, async (req, res) => {
       const { id } = req.params;
       const updatedAnimal = req.body;
       const result = await animalCollection.updateOne(
@@ -83,7 +120,7 @@ async function run() {
       res.send(result);
     });
     //delete one animal
-    app.delete("/animals/:id", async (req, res) => {
+    app.delete("/animals/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await animalCollection.deleteOne(query);
@@ -94,7 +131,7 @@ async function run() {
     // const { ObjectId } = require('mongodb');
 
     // 1. POST an adoption request
-    app.post("/adoptions", async (req, res) => {
+    app.post("/adoptions",verifyToken, async (req, res) => {
       try {
         const adoption = req.body;
         console.log("Received Adoption Data:", adoption);
@@ -107,7 +144,7 @@ async function run() {
     });
 
     // 2. GET all adoption requests for the LOGGED-IN USER (For My Requests Page)
-    app.get("/adoptions/user/:email", async (req, res) => {
+    app.get("/adoptions/user/:email",verifyToken, async (req, res) => {
       try {
         const email = req.params.email;
         const query = { userEmail: email };
@@ -120,7 +157,7 @@ async function run() {
     });
 
     // 3. GET all adoption requests for a SPECIFIC PET (For the Requests Modal in My Listings)
-    app.get("/adoptions/pet/:id", async (req, res) => {
+    app.get("/adoptions/pet/:id",verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
         const query = { petId: id };
@@ -131,7 +168,7 @@ async function run() {
         res.status(500).send({ error: true, message: "Internal Server Error" });
       }
     });
-    
+
     // GET /adoptions/check?petId=xxx&email=yyy
     app.get("/adoptions/check", async (req, res) => {
       try {
@@ -155,7 +192,7 @@ async function run() {
       }
     });
     // 4. PUT (Update) the status of an adoption request (Approve/Reject)
-    app.put("/adoptions/:id", async (req, res) => {
+    app.put("/adoptions/:id",verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
         const { status } = req.body;
@@ -172,7 +209,7 @@ async function run() {
     });
 
     // DELETE an adoption request (Cancel Request)
-    app.delete("/adoptions/:id", async (req, res) => {
+    app.delete("/adoptions/:id",verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
         // Make sure to use ObjectId!
@@ -188,6 +225,18 @@ async function run() {
         console.error("Error deleting request:", error);
         res.status(500).send({ error: true, message: "Internal Server Error" });
       }
+    });
+    // DELETE /adoptions/pet/:petId/others
+    app.delete("/adoptions/pet/:petId/others",verifyToken, async (req, res) => {
+      const { petId } = req.params;
+      const { excludeId } = req.query;
+
+      await adoptionCollection.deleteMany({
+        petId,
+        _id: { $ne: new ObjectId(excludeId) }, // delete all EXCEPT the approved one
+      });
+
+      res.send({ success: true });
     });
 
     // Connect the client to the server	(optional starting in v4.7)
