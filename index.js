@@ -47,7 +47,11 @@ async function run() {
 
       const query = {};
       if(name) query.petName = { $regex: name, $options: "i" };
-      if(species) query.species = {$regex : species , $options : "i"}
+       if (species) {
+         // species can be "Dog" (single) or "Dog,Cat,Bird" (multiple)
+         const speciesArray = species.split(",").map((s) => s.trim());
+         query.species = { $in: speciesArray };
+       }
 
       const result = await animalCollection.find(query).toArray();
       res.send(result);
